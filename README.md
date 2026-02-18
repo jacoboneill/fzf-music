@@ -2,7 +2,7 @@
 
 A terminal-based music playlist browser that uses `fzf` to select and play local `.m3u` playlists with cover art previews.
 
-![demo](assets/demo.gif)
+![demo](assets/demo.webp)
 
 ## Features
 
