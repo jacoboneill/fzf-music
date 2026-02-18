@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+export SHELL=/bin/bash
+
+PLAYLISTS_DIR="$HOME/Music/local/playlists"
+
+preview_playlist(){
+  dir="$1"
+  img=$(find "$dir" -maxdepth 1 -iname "cover.*" | head -n 1)
+
+  if [ -n "$img" ]; then
+    if [ -n "$KITTY_WINDOW_ID" ]; then
+      kitten icat --transfer-mode=memory --stdin=no --scale-up --place=${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}@0x0 "$img"
+    else
+      chafa -f symbols -s ${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES} "$img"
+    fi
+  fi
+}
+export -f preview_playlist
+
+track_list(){
+  f="$1"
+  grep -v "^#" "$f" | while IFS= read -r line; do
+    basename "$line" | sed "s/^[0-9]*[[:space:]]*-[[:space:]]*//" | sed "s/\.[^.]*$//"
+  done
+}
+export -f track_list
+
+check_dependencies(){
+  for cmd in mpv chafa fzf displayplacer; do
+    if ! command -v "$cmd" &> /dev/null; then
+      echo "Error: '$cmd' is not installed. See README for installation instructions"
+      exit 1
+    fi
+  done
+}
+
+main() {
+  screens=$(displayplacer list | grep "Type:" | sed 's/Type: //')
+  if [ $(echo "$screens" | wc -l) -eq 1 ]; then
+    screen=0
+  else
+    screen=$(echo "$screens" | fzf --prompt="Select screen: " --accept-nth '{n}')
+  fi
+  [ -z "$screen" ] && exit 1
+
+  playlists=$(find $PLAYLISTS_DIR -type f -name "*.m3u")
+  playlist=$(echo "$playlists" | fzf --prompt="Select playlist: " \
+    --with-nth=-1 \
+    --delimiter=/ \
+    --preview 'f={}; d=$(dirname "$f"); preview_playlist "$d"' \
+    --preview-window=top,75% \
+    --bind 'ctrl-t:change-preview:track_list {}' \
+    --bind 'ctrl-i:change-preview:f={}; d=$(dirname "$f"); preview_playlist "$d"' \
+    --header 'ctrl-t: tracks / ctrl-i: cover'
+  )
+  [ -z "$playlist" ] && exit 1
+
+  mpv --loop-playlist --screen=$screen --fullscreen --shuffle "$playlist"
+}
+
+check_dependencies
+main
