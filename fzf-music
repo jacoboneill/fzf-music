@@ -55,7 +55,7 @@ main() {
   )
   [ -z "$playlist" ] && exit 1
 
-  mpv --loop-playlist --screen=$screen --fullscreen --shuffle "$playlist"
+  mpv --really-quiet --loop-playlist --screen=$screen --fullscreen --shuffle "$playlist" &>/dev/null &
 }
 
 check_dependencies
